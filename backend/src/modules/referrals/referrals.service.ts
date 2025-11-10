@@ -6,8 +6,16 @@ import { Referral } from '../../database/models/referral.model';
 export class ReferralsService {
   constructor(@InjectModel(Referral) private referralModel: typeof Referral) {}
 
-  async create(data: { usuario_origem_id: number; usuario_destino_id: number; descricao: string }) {
-    return this.referralModel.create({ ...data, status: 'nova' });
+  async create(data: {
+    usuario_origem_id?: number;
+    usuario_destino_id?: number;
+    membro_origem_id?: number;
+    membro_destino_id?: number;
+    descricao: string;
+  }) {
+    const usuario_origem_id = data.usuario_origem_id ?? data.membro_origem_id;
+    const usuario_destino_id = data.usuario_destino_id ?? data.membro_destino_id;
+    return this.referralModel.create({ usuario_origem_id, usuario_destino_id, descricao: data.descricao, status: 'nova' } as any);
   }
 
   async getById(id: number) {

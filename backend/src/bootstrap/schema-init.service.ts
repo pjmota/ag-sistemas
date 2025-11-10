@@ -82,22 +82,26 @@ export class SchemaInitService implements OnModuleInit {
           console.log('[SchemaInit] Adicionada coluna indicacoes.usuario_destino_id');
         }
         // Backfill: mapeia membros -> usuarios via email para preencher usuario_* quando possível
-        await this.sequelize.query(
-          `UPDATE indicacoes AS i
-           SET usuario_origem_id = (
-             SELECT u.id FROM usuarios AS u
-             WHERE u.email = (SELECT m.email FROM membros AS m WHERE m.id = i.membro_origem_id)
-           )
-           WHERE usuario_origem_id IS NULL AND membro_origem_id IS NOT NULL;`
-        );
-        await this.sequelize.query(
-          `UPDATE indicacoes AS i
-           SET usuario_destino_id = (
-             SELECT u.id FROM usuarios AS u
-             WHERE u.email = (SELECT m.email FROM membros AS m WHERE m.id = i.membro_destino_id)
-           )
-           WHERE usuario_destino_id IS NULL AND membro_destino_id IS NOT NULL;`
-        );
+        if ('membro_origem_id' in indicacoesDesc) {
+          await this.sequelize.query(
+            `UPDATE indicacoes AS i
+             SET usuario_origem_id = (
+               SELECT u.id FROM usuarios AS u
+               WHERE u.email = (SELECT m.email FROM membros AS m WHERE m.id = i.membro_origem_id)
+             )
+             WHERE usuario_origem_id IS NULL AND membro_origem_id IS NOT NULL;`
+          );
+        }
+        if ('membro_destino_id' in indicacoesDesc) {
+          await this.sequelize.query(
+            `UPDATE indicacoes AS i
+             SET usuario_destino_id = (
+               SELECT u.id FROM usuarios AS u
+               WHERE u.email = (SELECT m.email FROM membros AS m WHERE m.id = i.membro_destino_id)
+             )
+             WHERE usuario_destino_id IS NULL AND membro_destino_id IS NOT NULL;`
+          );
+        }
         // Após backfill, defina como NOT NULL se desejar e remova colunas antigas
         const indicacoesDescAfter = await qi.describeTable('indicacoes');
         if ('membro_origem_id' in indicacoesDescAfter) {

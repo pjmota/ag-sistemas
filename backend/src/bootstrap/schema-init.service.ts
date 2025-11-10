@@ -123,15 +123,17 @@ export class SchemaInitService implements OnModuleInit {
           // eslint-disable-next-line no-console
           console.log('[SchemaInit] Adicionada coluna obrigados.usuario_id');
         }
-        // Backfill: mapeia membro_id -> usuario_id via email
-        await this.sequelize.query(
-          `UPDATE obrigados AS o
-           SET usuario_id = (
-             SELECT u.id FROM usuarios AS u
-             WHERE u.email = (SELECT m.email FROM membros AS m WHERE m.id = o.membro_id)
-           )
-           WHERE usuario_id IS NULL AND membro_id IS NOT NULL;`
-        );
+        // Backfill: mapeia membro_id -> usuario_id via email, somente se coluna membro_id existir
+        if ('membro_id' in obrigadosDesc) {
+          await this.sequelize.query(
+            `UPDATE obrigados AS o
+             SET usuario_id = (
+               SELECT u.id FROM usuarios AS u
+               WHERE u.email = (SELECT m.email FROM membros AS m WHERE m.id = o.membro_id)
+             )
+             WHERE usuario_id IS NULL AND membro_id IS NOT NULL;`
+          );
+        }
         const obrigadosDescAfter = await qi.describeTable('obrigados');
         if ('membro_id' in obrigadosDescAfter) {
           await qi.removeColumn('obrigados', 'membro_id');

@@ -11,7 +11,7 @@ export class ReferralsController {
   @Post()
   @UseGuards(AuthGuard('jwt'))
   async create(
-    @Body() body: { membro_origem_id: number; membro_destino_id: number; descricao: string },
+    @Body() body: { usuario_origem_id: number; usuario_destino_id: number; descricao: string },
   ) {
     return this.referralsService.create(body);
   }
@@ -22,24 +22,24 @@ export class ReferralsController {
     return this.referralsService.getById(Number(id));
   }
 
-  @Get('membro/:id/enviadas')
+  @Get('usuario/:id/enviadas')
   @UseGuards(AuthGuard('jwt'))
   async sent(@Param('id') id: string) {
-    return this.referralsService.listByMemberSent(Number(id));
+    return this.referralsService.listByUserSent(Number(id));
   }
 
-  @Get('membro/:id/recebidas')
+  @Get('usuario/:id/recebidas')
   @UseGuards(AuthGuard('jwt'))
   async received(@Param('id') id: string) {
-    return this.referralsService.listByMemberReceived(Number(id));
+    return this.referralsService.listByUserReceived(Number(id));
   }
 
   @Patch(':id/status')
   @UseGuards(AuthGuard('jwt'))
   async updateStatus(
     @Param('id') id: string,
-    @Body() body: { status: 'nova' | 'em contato' | 'fechada' | 'recusada' },
+    @Body() body: { status: 'nova' | 'em contato' | 'fechada' | 'recusada'; agradecimentos_publicos?: string },
   ) {
-    return this.referralsService.updateStatus(Number(id), body.status);
+    return this.referralsService.updateStatus(Number(id), body.status, body.agradecimentos_publicos);
   }
 }

@@ -48,4 +48,31 @@ describe('ReferralsService', () => {
     expect(referralModel.findAll).toHaveBeenCalledWith({ where: { membro_destino_id: 20 } });
     expect(result).toBe(rows);
   });
+
+  it('create cria indicação com status nova', async () => {
+    const created = { id: 10, status: 'nova' };
+    referralModel.create.mockResolvedValue(created);
+    const res = await service.create({ membro_origem_id: 1, membro_destino_id: 2, descricao: 'Teste' });
+    expect(referralModel.create).toHaveBeenCalledWith({ membro_origem_id: 1, membro_destino_id: 2, descricao: 'Teste', status: 'nova' });
+    expect(res).toBe(created);
+  });
+
+  it('getById retorna entidade quando encontra', async () => {
+    const entity = { id: 5 };
+    referralModel.findByPk.mockResolvedValue(entity);
+    const res = await service.getById(5);
+    expect(referralModel.findByPk).toHaveBeenCalledWith(5);
+    expect(res).toBe(entity);
+  });
+
+  it('updateStatus define agradecimentos quando fornecido', async () => {
+    const save = jest.fn().mockResolvedValue(undefined);
+    const entity: any = { id: 3, status: 'nova', save };
+    referralModel.findByPk.mockResolvedValue(entity);
+    const res = await service.updateStatus(3, 'fechada', 'Obrigado!');
+    expect(entity.status).toBe('fechada');
+    expect(entity.agradecimentos_publicos).toBe('Obrigado!');
+    expect(save).toHaveBeenCalled();
+    expect(res).toBe(entity);
+  });
 });

@@ -19,7 +19,7 @@ export class DashboardController {
   // Registrar um "obrigado" (para usar no KPI)
   @Post('obrigados')
   @UseGuards(AuthGuard('jwt'))
-  async createThanks(@Body() body: { membro_id: number; descricao: string }) {
+  async createThanks(@Body() body: { usuario_id: number; descricao: string }) {
     return this.thanksModel.create({ ...body });
   }
 }

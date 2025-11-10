@@ -1,6 +1,7 @@
 import { MembersController } from '../modules/members/members.controller';
 import { MembersService } from '../modules/members/members.service';
 import { InvitesService } from '../modules/invites/invites.service';
+import { UsersService } from '../modules/users/users.service';
 
 describe('MembersController', () => {
   const membersService: jest.Mocked<MembersService> = {
@@ -14,12 +15,16 @@ describe('MembersController', () => {
     markUsed: jest.fn(),
     listActive: jest.fn(),
   } as any;
+  const usersService: jest.Mocked<UsersService> = {
+    listAll: jest.fn(),
+    create: jest.fn(),
+  } as any;
 
   let controller: MembersController;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    controller = new MembersController(membersService, invitesService);
+    controller = new MembersController(membersService, invitesService, usersService);
   });
 
   it('listActive retorna membros ativos via serviço', async () => {

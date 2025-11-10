@@ -1,4 +1,4 @@
-import { Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { InvitesService } from './invites.service';
 import { AuthGuard } from '@nestjs/passport';
@@ -14,5 +14,11 @@ export class InvitesController {
   @UseGuards(AuthGuard('jwt'), new RolesGuard('admin'))
   async generate(@Param('intentionId') intentionId: string) {
     return this.invitesService.generateForIntention(Number(intentionId));
+  }
+
+  // Público: obter dados pré-preenchidos para cadastro via token
+  @Get(':token/dados')
+  async prefill(@Param('token') token: string) {
+    return this.invitesService.getPrefillByToken(token);
   }
 }

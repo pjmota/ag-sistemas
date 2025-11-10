@@ -4,7 +4,10 @@ import request from 'supertest';
 import { AppModule } from '../app.module';
 import { Sequelize } from 'sequelize-typescript';
 import { User } from '../database/models/user.model';
+import { UsersService } from '../modules/users/users.service';
 import * as bcrypt from 'bcryptjs';
+import { getModelToken } from '@nestjs/sequelize';
+// Garante admin válido independentemente do InitService
 
 describe('API E2E', () => {
   let app: INestApplication;
@@ -15,13 +18,24 @@ describe('API E2E', () => {
     process.env.DB_PATH = ':memory:';
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
-    await app.init();
-
+    // sincroniza o schema ANTES de inicializar a aplicação para evitar falha em onModuleInit
     sequelize = app.get(Sequelize);
     await sequelize.sync({ force: true });
+    await app.init();
 
-    const hash = await bcrypt.hash('123456', 10);
-    await User.create({ email: 'admin@exemplo.com', senha_hash: hash, role: 'admin' } as any);
+    // Garante que o usuário admin exista com senha correta antes do login
+    const userModel = app.get<typeof User>(getModelToken(User));
+    const adminEmail = 'admin@exemplo.com';
+    const adminPassword = '123456';
+    const existing = await userModel.findOne({ where: { email: adminEmail } });
+    const hash = await bcrypt.hash(adminPassword, 10);
+    if (!existing) {
+      await userModel.create({ email: adminEmail, senha_hash: hash, role: 'admin' } as any);
+    } else {
+      existing.senha_hash = hash;
+      existing.role = 'admin';
+      await existing.save();
+    }
 
     const res = await request(app.getHttpServer())
       .post('/auth/login')
@@ -73,9 +87,9 @@ describe('API E2E', () => {
     const tokenConvite = convite.body.token;
 
     await request(app.getHttpServer())
-      .post('/membros/cadastro')
+      .post('/usuarios/cadastro')
       .query({ token: tokenConvite })
-      .send({ nome: 'Maria', email: 'maria@example.com' })
+      .send({ email: 'maria@example.com', senha: 'abc123', telefone: '11999999999', cargo: 'Dev' })
       .expect(201);
   });
 
@@ -98,12 +112,18 @@ describe('API E2E', () => {
       .expect(201);
     const tokenInvite = inviteRes.body.token;
 
-    const reg = await request(app.getHttpServer())
-      .post('/membros/cadastro')
+    await request(app.getHttpServer())
+      .post('/usuarios/cadastro')
       .query({ token: tokenInvite })
-      .send({ nome: 'Maria', email: 'maria2@example.com', telefone: '9999-1234' })
+      .send({ email: 'maria2@example.com', senha: 'abc123', telefone: '9999-1234', cargo: 'Dev' })
       .expect(201);
-    const memberId = reg.body.id;
+
+    // Busca membro criado via aprovação da intenção
+    const members = await request(app.getHttpServer())
+      .get('/membros/todos')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const memberId = (members.body as any[]).find((m) => m.email === 'maria@example.com')?.id;
 
     const upd = await request(app.getHttpServer())
       .patch(`/membros/${memberId}/status`)
@@ -135,9 +155,14 @@ describe('API E2E', () => {
         .set('Authorization', `Bearer ${token}`)
         .expect(201);
       const reg = await request(app.getHttpServer())
-        .post('/membros/cadastro')
+        .post('/usuarios/cadastro')
         .query({ token: inv.body.token })
-        .send({ nome: s === submitA.body.id ? 'Carlos' : 'Ana', email: s === submitA.body.id ? 'carlos@example.com' : 'ana@example.com' })
+        .send({
+          email: s === submitA.body.id ? 'carlos@example.com' : 'ana@example.com',
+          senha: 'abc123',
+          telefone: '11999999999',
+          cargo: 'Membro',
+        })
         .expect(201);
     }
 
@@ -197,9 +222,9 @@ describe('API E2E', () => {
 
   it('validação de token inválido retorna erro', async () => {
     await request(app.getHttpServer())
-      .post('/membros/cadastro')
+      .post('/usuarios/cadastro')
       .query({ token: 'token-invalido' })
-      .send({ nome: 'Eva', email: 'eva@example.com' })
+      .send({ email: 'eva@example.com', senha: 'abc123', telefone: '11999999999', cargo: 'Dev' })
       .expect(400);
   });
 

@@ -6,7 +6,14 @@ import { Member } from '../../database/models/member.model';
 export class MembersService {
   constructor(@InjectModel(Member) private memberModel: typeof Member) {}
 
-  async create(data: { nome: string; email: string; telefone?: string }) {
+  async create(data: {
+    nome: string;
+    email: string;
+    telefone?: string;
+    empresa?: string;
+    cargo?: string;
+    bio_area_atuacao?: string;
+  }) {
     return this.memberModel.create({ ...data, status: 'ativo' });
   }
 

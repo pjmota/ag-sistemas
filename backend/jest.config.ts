@@ -7,7 +7,7 @@ const config: Config = {
   moduleFileExtensions: ['ts', 'js', 'json'],
   collectCoverage: true,
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov'],
+  coverageReporters: ['text', 'text-summary', 'lcov'],
   coverageThreshold: {
     global: {
       branches: 75,

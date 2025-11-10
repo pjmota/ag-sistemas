@@ -14,6 +14,15 @@ export class Member extends Model {
   @Column({ type: DataType.STRING, allowNull: true })
   telefone?: string;
 
+  @Column({ type: DataType.STRING, allowNull: true })
+  empresa?: string;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  cargo?: string;
+
+  @Column({ type: DataType.TEXT, allowNull: true })
+  bio_area_atuacao?: string;
+
   @Column({ type: DataType.STRING, allowNull: false, defaultValue: 'pendente' })
   status!: 'pendente' | 'ativo' | 'recusado';
 

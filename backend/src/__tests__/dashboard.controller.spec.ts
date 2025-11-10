@@ -17,7 +17,7 @@ describe('DashboardController', () => {
   });
 
   it('createThanks cria registro de agradecimento via model', async () => {
-    const payload = { membro_id: 1, descricao: 'Obrigado!' };
+    const payload = { usuario_id: 1, descricao: 'Obrigado!' };
     const created = { id: 10, ...payload };
     thanksModel.create.mockResolvedValue(created);
     const res = await controller.createThanks(payload);

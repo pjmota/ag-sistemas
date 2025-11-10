@@ -8,9 +8,24 @@ export class User extends Model {
   @Column({ type: DataType.STRING, allowNull: false, unique: true })
   email!: string;
 
+  @Column({ type: DataType.STRING, allowNull: true })
+  nome?: string;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  empresa?: string;
+
   @Column({ type: DataType.STRING, allowNull: false })
   senha_hash!: string;
 
   @Column({ type: DataType.STRING, allowNull: false })
   role!: 'admin' | 'membro';
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  telefone?: string;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  cargo?: string;
+
+  @Column({ type: DataType.TEXT, allowNull: true })
+  bio_area_atuacao?: string;
 }

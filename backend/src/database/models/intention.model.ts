@@ -20,6 +20,9 @@ export class Intention extends Model {
   @Column({ type: DataType.STRING, allowNull: false, defaultValue: 'pendente' })
   status!: 'pendente' | 'aprovada' | 'recusada';
 
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
+  convite_gerado!: boolean;
+
   @Column({ type: DataType.DATE, allowNull: false, defaultValue: DataType.NOW })
   data!: Date;
 }

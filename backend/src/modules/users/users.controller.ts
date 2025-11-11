@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { AuthGuard } from '@nestjs/passport';
 import { InvitesService } from '../invites/invites.service';
+import { RolesGuard } from '../../common/guards/roles.guard';
 
 @ApiTags('usuarios')
 @Controller('usuarios')
@@ -41,5 +42,29 @@ export class UsersController {
     });
     await this.invitesService.markUsed(token);
     return usuario;
+  }
+
+  // Admin: atualizar dados do usuário
+  @Patch(':id')
+  @UseGuards(AuthGuard('jwt'), new RolesGuard('admin'))
+  async update(
+    @Param('id') id: string,
+    @Body() body: {
+      nome?: string;
+      empresa?: string;
+      telefone?: string;
+      cargo?: string;
+      bio_area_atuacao?: string;
+      role?: 'admin' | 'membro';
+    },
+  ) {
+    return this.usersService.update(Number(id), body as any);
+  }
+
+  // Admin: ativar/inativar usuário
+  @Patch(':id/ativo')
+  @UseGuards(AuthGuard('jwt'), new RolesGuard('admin'))
+  async setActive(@Param('id') id: string, @Body() body: { ativo: boolean }) {
+    return this.usersService.setActive(Number(id), !!body.ativo);
   }
 }

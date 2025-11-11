@@ -8,7 +8,7 @@ export class UsersService {
   constructor(@InjectModel(User) private userModel: typeof User) {}
 
   async listAll() {
-    return this.userModel.findAll({ attributes: ['id', 'email', 'role', 'nome', 'empresa'] });
+    return this.userModel.findAll({ attributes: ['id', 'email', 'role', 'nome', 'empresa', 'ativo'] });
   }
 
   async create(
@@ -31,7 +31,39 @@ export class UsersService {
       telefone: extras?.telefone,
       cargo: extras?.cargo,
       bio_area_atuacao: extras?.bio_area_atuacao,
+      ativo: true,
     } as any);
     return { id: u.id, email: u.email, role: u.role, nome: u.nome, empresa: u.empresa } as any;
+  }
+
+  async update(
+    id: number,
+    data: {
+      nome?: string;
+      empresa?: string;
+      telefone?: string;
+      cargo?: string;
+      bio_area_atuacao?: string;
+      role?: 'admin' | 'membro';
+    }
+  ) {
+    const u = await this.userModel.findByPk(id);
+    if (!u) return null as any;
+    if (typeof data.nome !== 'undefined') u.nome = data.nome;
+    if (typeof data.empresa !== 'undefined') u.empresa = data.empresa;
+    if (typeof data.telefone !== 'undefined') u.telefone = data.telefone as any;
+    if (typeof data.cargo !== 'undefined') u.cargo = data.cargo as any;
+    if (typeof data.bio_area_atuacao !== 'undefined') u.bio_area_atuacao = data.bio_area_atuacao as any;
+    if (typeof data.role !== 'undefined') u.role = data.role as any;
+    await u.save();
+    return { id: u.id, email: u.email, role: u.role, nome: u.nome, empresa: u.empresa, ativo: u.ativo } as any;
+  }
+
+  async setActive(id: number, ativo: boolean) {
+    const u = await this.userModel.findByPk(id);
+    if (!u) return null as any;
+    u.ativo = !!ativo;
+    await u.save();
+    return { id: u.id, email: u.email, role: u.role, nome: u.nome, empresa: u.empresa, ativo: u.ativo } as any;
   }
 }

@@ -28,4 +28,7 @@ export class User extends Model {
 
   @Column({ type: DataType.TEXT, allowNull: true })
   bio_area_atuacao?: string;
+
+  @Column({ type: DataType.BOOLEAN, allowNull: true, defaultValue: true })
+  ativo?: boolean;
 }

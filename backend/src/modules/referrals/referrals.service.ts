@@ -1,10 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Referral } from '../../database/models/referral.model';
+import { Thanks } from '../../database/models/thanks.model';
 
 @Injectable()
 export class ReferralsService {
-  constructor(@InjectModel(Referral) private referralModel: typeof Referral) {}
+  constructor(
+    @InjectModel(Referral) private referralModel: typeof Referral,
+    // Optional injection to keep tests that instantiate with one arg working
+    @InjectModel(Thanks) private thanksModel?: typeof Thanks,
+  ) {}
 
   private async withRetry<T>(action: () => Promise<T>, attempts = 5, delayMs = 100): Promise<T> {
     let lastErr: any;
@@ -68,6 +73,21 @@ export class ReferralsService {
       r.agradecimentos_publicos = agradecimentos_publicos;
     }
     await this.withRetry(() => r.save());
+
+    // Se fechada e há agradecimento preenchido, registra também em 'obrigados'
+    const hasThanksText = typeof agradecimentos_publicos === 'string' && agradecimentos_publicos.trim().length > 0;
+    if (status === 'fechada' && hasThanksText && this.thanksModel) {
+      try {
+        await this.withRetry(() => this.thanksModel!.create({
+          usuario_id: r.usuario_destino_id,
+          descricao: agradecimentos_publicos!.trim(),
+        } as any));
+      } catch (e) {
+        // Não falha a operação principal se registro de "obrigado" tiver problema
+        // eslint-disable-next-line no-console
+        console.warn('[ReferralsService] Falha ao registrar obrigado:', e);
+      }
+    }
     return r;
   }
 }

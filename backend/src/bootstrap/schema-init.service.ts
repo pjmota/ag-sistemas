@@ -333,6 +333,23 @@ export class SchemaInitService implements OnModuleInit {
         // eslint-disable-next-line no-console
         console.warn('[SchemaInit] Falha ao remover tabelas legadas:', legacyErr);
       }
+
+      // Garante coluna 'ativo' na tabela de planos
+      try {
+        const planosDesc = await qi.describeTable('planos');
+        if (planosDesc && !('ativo' in planosDesc)) {
+          await qi.addColumn('planos', 'ativo', { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true });
+          // eslint-disable-next-line no-console
+          console.log('[SchemaInit] Adicionada coluna planos.ativo');
+        }
+      } catch (ePlan: any) {
+        const msgPlan = String(ePlan?.parent?.message || ePlan?.message || '');
+        if (msgPlan.includes('no such table') || msgPlan.includes('No description found')) {
+          // Tabela ainda não criada — sync cuidará
+        } else {
+          throw ePlan;
+        }
+      }
     } catch (e: any) {
       const msg = String(e?.parent?.message || e?.message || '');
       if (msg.includes('no such table') || msg.includes('No description found')) {

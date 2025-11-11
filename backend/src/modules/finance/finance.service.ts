@@ -7,7 +7,7 @@ import { Member } from '../../database/models/member.model';
 import { User } from '../../database/models/user.model';
 import { Op } from 'sequelize';
 
-type GenerateParams = { month: number; year: number };
+type GenerateParams = { month: number; year: number; usuario_id?: number };
 
 @Injectable()
 export class FinanceService {
@@ -47,7 +47,19 @@ export class FinanceService {
 
   async createPlan(data: { nome: string; valor: number; dia_vencimento_padrao?: number }) {
     const dia = typeof data.dia_vencimento_padrao === 'number' ? data.dia_vencimento_padrao : 10;
-    return this.planModel.create({ nome: data.nome, valor: data.valor, dia_vencimento_padrao: dia, periodicidade: 'mensal' } as any);
+    return this.planModel.create({ nome: data.nome, valor: data.valor, dia_vencimento_padrao: dia, periodicidade: 'mensal', ativo: true } as any);
+  }
+
+  async listPlans() {
+    return this.withRetry(() => this.planModel.findAll());
+  }
+
+  async updatePlanActive(id: number, ativo: boolean) {
+    const p = await this.withRetry(() => this.planModel.findByPk(id));
+    if (!p) throw new NotFoundException('Plano não encontrado');
+    p.ativo = !!ativo;
+    await this.withRetry(() => p.save());
+    return p;
   }
 
   async assignPlan(data: { usuario_id: number; plano_id: number; data_inicio?: Date }) {
@@ -55,10 +67,14 @@ export class FinanceService {
     return this.withRetry(() => this.memberPlanModel.create({ usuario_id: data.usuario_id, plano_id: data.plano_id, data_inicio: inicio } as any));
   }
 
-  async generateMonthlyFees({ month, year }: GenerateParams) {
+  async generateMonthlyFees({ month, year, usuario_id }: GenerateParams) {
     // Gera mensalidades diretamente a partir das associações de plano (usuario_planos),
     // evitando depender do estado da tabela de membros.
-    const associations = await this.withRetry(() => this.memberPlanModel.findAll());
+    const associations = await this.withRetry(() =>
+      typeof usuario_id === 'number'
+        ? this.memberPlanModel.findAll({ where: { usuario_id } })
+        : this.memberPlanModel.findAll()
+    );
     const dueDateForPlan = (plan: Plan) => new Date(year, month - 1, plan.dia_vencimento_padrao);
 
     let createdCount = 0;

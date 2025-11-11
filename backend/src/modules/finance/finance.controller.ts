@@ -10,13 +10,23 @@ export class FinanceController {
     return this.finance.createPlan(body);
   }
 
+  @Get('planos')
+  listPlans() {
+    return this.finance.listPlans();
+  }
+
+  @Patch('planos/:id/ativo')
+  updatePlanActive(@Param('id') id: string, @Body() body: { ativo: boolean }) {
+    return this.finance.updatePlanActive(parseInt(id, 10), body.ativo);
+  }
+
   @Post('associacoes')
   assignPlan(@Body() body: { usuario_id: number; plano_id: number; data_inicio?: Date }) {
     return this.finance.assignPlan(body);
   }
 
   @Post('mensalidades/gerar')
-  generate(@Body() body: { month: number; year: number }) {
+  generate(@Body() body: { month: number; year: number; usuario_id?: number }) {
     return this.finance.generateMonthlyFees(body);
   }
 

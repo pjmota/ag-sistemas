@@ -16,4 +16,7 @@ export class Plan extends Model {
 
   @Column({ type: DataType.STRING, allowNull: false, defaultValue: 'mensal' })
   periodicidade!: 'mensal';
+
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: true })
+  ativo!: boolean;
 }

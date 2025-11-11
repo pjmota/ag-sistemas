@@ -50,11 +50,20 @@ describe('UsersService', () => {
     expect(res).toEqual({ id: 100, email: 'c@c.com', role: 'membro' });
   });
 
+  it('cria usuário com role default (ausente no argumento)', async () => {
+    userModel.findOne.mockResolvedValue(null);
+    userModel.create.mockResolvedValue({ id: 101, email: 'd@d.com', role: 'membro' });
+    const res = await (service as any).create('d@d.com', '111');
+    const call = userModel.create.mock.calls[0][0];
+    expect(call.role).toBe('membro');
+    expect(res).toEqual({ id: 101, email: 'd@d.com', role: 'membro' });
+  });
+
   it('listAll retorna id, email e role', async () => {
     const rows = [{ id: 1, email: 'a@a.com', role: 'admin' }];
     userModel.findAll = jest.fn().mockResolvedValue(rows);
     const res = await service.listAll();
-    expect(userModel.findAll).toHaveBeenCalledWith({ attributes: ['id', 'email', 'role'] });
+    expect(userModel.findAll).toHaveBeenCalledWith({ attributes: ['id', 'email', 'role', 'nome', 'empresa'] });
     expect(res).toBe(rows);
   });
 });

@@ -11,8 +11,10 @@ export class ReferralsController {
   @Post()
   @UseGuards(AuthGuard('jwt'))
   async create(@Body() body: any) {
-    const usuario_origem_id = body?.usuario_origem_id ?? body?.membro_origem_id;
-    const usuario_destino_id = body?.usuario_destino_id ?? body?.membro_destino_id;
+    const origemRaw = body?.usuario_origem_id ?? body?.membro_origem_id;
+    const destinoRaw = body?.usuario_destino_id ?? body?.membro_destino_id;
+    const usuario_origem_id = typeof origemRaw !== 'undefined' ? Number(origemRaw) : undefined;
+    const usuario_destino_id = typeof destinoRaw !== 'undefined' ? Number(destinoRaw) : undefined;
     const descricao = body?.descricao;
     return this.referralsService.create({ usuario_origem_id, usuario_destino_id, descricao });
   }

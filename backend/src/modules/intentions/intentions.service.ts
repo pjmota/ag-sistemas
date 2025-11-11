@@ -10,29 +10,47 @@ export class IntentionsService {
     @InjectModel(Member) private memberModel: typeof Member,
   ) {}
 
+  private async withRetry<T>(action: () => Promise<T>, attempts = 5, delayMs = 100): Promise<T> {
+    let lastErr: any;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await action();
+      } catch (err: any) {
+        const msg = String(err?.message || '');
+        const isBusy = msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || msg.includes('SequelizeTimeoutError');
+        if (!isBusy || i === attempts - 1) {
+          throw err;
+        }
+        await new Promise(r => setTimeout(r, delayMs));
+        lastErr = err;
+      }
+    }
+    throw lastErr;
+  }
+
   async submit(data: { nome: string; email: string; empresa?: string; motivo: string }) {
-    return this.intentionModel.create({ ...data, status: 'pendente' });
+    return this.withRetry(() => this.intentionModel.create({ ...data, status: 'pendente' }));
   }
 
   async listAll() {
-    return this.intentionModel.findAll({ order: [['data', 'DESC']] });
+    return this.withRetry(() => this.intentionModel.findAll({ order: [['data', 'DESC']] }));
   }
 
   async updateStatus(id: number, status: 'aprovada' | 'recusada') {
-    const intention = await this.intentionModel.findByPk(id);
+    const intention = await this.withRetry(() => this.intentionModel.findByPk(id));
     if (!intention) throw new NotFoundException('Intenção não encontrada');
     intention.status = status;
-    await intention.save();
+    await this.withRetry(() => intention.save());
     // Quando intenção é aprovada, cria (ou garante) registro em membros com dados da intenção
     if (status === 'aprovada') {
-      const existing = await this.memberModel.findOne({ where: { email: intention.email } });
+      const existing = await this.withRetry(() => this.memberModel.findOne({ where: { email: intention.email } }));
       if (!existing) {
-        await this.memberModel.create({
+        await this.withRetry(() => this.memberModel.create({
           nome: intention.nome,
           email: intention.email,
           empresa: intention.empresa || null,
           status: 'pendente',
-        } as any);
+        } as any));
       }
     }
     return intention;

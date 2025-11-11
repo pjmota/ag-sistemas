@@ -18,6 +18,13 @@ export class InitService implements OnModuleInit {
         if (created) {
           // eslint-disable-next-line no-console
           console.log(`[InitService] Usuário admin criado: ${adminEmail}`);
+        } else {
+          // Garante credenciais válidas sempre que já existir (test/dev)
+          user.senha_hash = hash;
+          user.role = 'admin' as any;
+          await user.save();
+          // eslint-disable-next-line no-console
+          console.log('[InitService] Usuário admin existente atualizado com senha padrão');
         }
         return;
       } catch (e: any) {

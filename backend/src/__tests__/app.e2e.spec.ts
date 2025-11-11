@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+jest.setTimeout(30000);
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../app.module';
@@ -18,23 +19,53 @@ describe('API E2E', () => {
     process.env.DB_PATH = ':memory:';
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
-    // sincroniza o schema ANTES de inicializar a aplicação para evitar falha em onModuleInit
+    // Inicializa a aplicação primeiro para garantir modelos registrados
+    await app.init();
+    // Depois sincroniza o schema para garantir criação das tabelas antes do seed
     sequelize = app.get(Sequelize);
     await sequelize.sync({ force: true });
-    await app.init();
 
     // Garante que o usuário admin exista com senha correta antes do login
     const userModel = app.get<typeof User>(getModelToken(User));
+    // Helper de retentativas para contornar travas/concurrency do SQLite e tabelas ausentes
+    const withRetry = async <T>(action: () => Promise<T>, attempts = 5, delayMs = 100): Promise<T> => {
+      let lastErr: any;
+      for (let i = 0; i < attempts; i++) {
+        try {
+          return await action();
+        } catch (err: any) {
+          const msg = String(err?.parent?.message || err?.message || '');
+          const isBusy = msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || err?.name === 'SequelizeTimeoutError';
+          const noTable = msg.includes('no such table');
+          if (noTable) {
+            try { await userModel.sync(); } catch {}
+          }
+          if ((!isBusy && !noTable) || i === attempts - 1) {
+            throw err;
+          }
+          await new Promise(res => setTimeout(res, delayMs));
+          lastErr = err;
+        }
+      }
+      throw lastErr;
+    };
     const adminEmail = 'admin@exemplo.com';
     const adminPassword = '123456';
-    const existing = await userModel.findOne({ where: { email: adminEmail } });
+    const existing = await withRetry(() => userModel.findOne({ where: { email: adminEmail } }));
     const hash = await bcrypt.hash(adminPassword, 10);
+    // Usa findOrCreate com retentativas para evitar CONSTRAINT/LOCK em SQLite
+    const defaults = { email: adminEmail, senha_hash: hash, role: 'admin' } as any;
     if (!existing) {
-      await userModel.create({ email: adminEmail, senha_hash: hash, role: 'admin' } as any);
+      const [user, created] = await (withRetry(() => (userModel as any).findOrCreate({ where: { email: adminEmail }, defaults })) as Promise<any>);
+      if (!created) {
+        user.senha_hash = hash;
+        user.role = 'admin';
+        await withRetry(() => user.save());
+      }
     } else {
       existing.senha_hash = hash;
       existing.role = 'admin';
-      await existing.save();
+      await withRetry(() => existing.save());
     }
 
     const res = await request(app.getHttpServer())

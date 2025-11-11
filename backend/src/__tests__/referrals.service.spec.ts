@@ -33,27 +33,27 @@ describe('ReferralsService', () => {
     expect(r).toBe(entity);
   });
 
-  it('listByMemberSent retorna lista para membro de origem', async () => {
+  it('listByUserSent retorna lista para usuário de origem', async () => {
     const rows = [{ id: 1 }, { id: 2 }];
     referralModel.findAll.mockResolvedValue(rows);
-    const result = await service.listByMemberSent(10);
-    expect(referralModel.findAll).toHaveBeenCalledWith({ where: { membro_origem_id: 10 } });
+    const result = await service.listByUserSent(10);
+    expect(referralModel.findAll).toHaveBeenCalledWith({ where: { usuario_origem_id: 10 } });
     expect(result).toBe(rows);
   });
 
-  it('listByMemberReceived retorna lista para membro de destino', async () => {
+  it('listByUserReceived retorna lista para usuário de destino', async () => {
     const rows = [{ id: 3 }];
     referralModel.findAll.mockResolvedValue(rows);
-    const result = await service.listByMemberReceived(20);
-    expect(referralModel.findAll).toHaveBeenCalledWith({ where: { membro_destino_id: 20 } });
+    const result = await service.listByUserReceived(20);
+    expect(referralModel.findAll).toHaveBeenCalledWith({ where: { usuario_destino_id: 20 } });
     expect(result).toBe(rows);
   });
 
-  it('create cria indicação com status nova', async () => {
+  it('create cria indicação com status nova normalizando membro_* para usuario_*', async () => {
     const created = { id: 10, status: 'nova' };
     referralModel.create.mockResolvedValue(created);
     const res = await service.create({ membro_origem_id: 1, membro_destino_id: 2, descricao: 'Teste' });
-    expect(referralModel.create).toHaveBeenCalledWith({ membro_origem_id: 1, membro_destino_id: 2, descricao: 'Teste', status: 'nova' });
+    expect(referralModel.create).toHaveBeenCalledWith({ usuario_origem_id: 1, usuario_destino_id: 2, descricao: 'Teste', status: 'nova' });
     expect(res).toBe(created);
   });
 

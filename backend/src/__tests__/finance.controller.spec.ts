@@ -64,10 +64,29 @@ describe('FinanceController', () => {
   });
 
   it('atualiza status via controller e marca como pago', async () => {
-    let pendentes = await controller.list('pendente', '11', '2025', String(joaoId));
+    let pendentes = await controller.list('pendente', '11', '2025', String(joaoUserId));
     if ((pendentes as any[]).length === 0) {
       // garante um alvo pendente caso outros testes tenham alterado estado
-      const novo = await Fee.create({ usuario_id: joaoUserId, valor: 100, vencimento: new Date(2025, 10, 10), status: 'pendente' } as any);
+      const novo = await (async () => {
+        for (let i = 0; i < 5; i++) {
+          try {
+            return await Fee.create({ usuario_id: joaoUserId, valor: 100, vencimento: new Date(2025, 10, 10), status: 'pendente' } as any);
+          } catch (e: any) {
+            const msg = String(e?.parent?.message || e?.message || '');
+            if (msg.includes('no such table')) {
+              await Fee.sync();
+              await new Promise(res => setTimeout(res, 50));
+              continue;
+            }
+            if (msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || e?.name === 'SequelizeTimeoutError') {
+              await new Promise(res => setTimeout(res, 100));
+              continue;
+            }
+            throw e;
+          }
+        }
+        throw new Error('Falha ao criar mensalidade pendente para updateStatus após retries');
+      })();
       pendentes = [novo];
     }
     const alvo = (pendentes as any[])[0];
@@ -82,7 +101,26 @@ describe('FinanceController', () => {
 
   it('cancela mensalidade e calcula totais', async () => {
     // cria uma mensalidade adicional pendente para cancelar
-    const extra = await Fee.create({ usuario_id: joaoUserId, valor: 100, vencimento: new Date(2025, 10, 15), status: 'pendente' } as any);
+    const extra = await (async () => {
+      for (let i = 0; i < 5; i++) {
+        try {
+          return await Fee.create({ usuario_id: joaoUserId, valor: 100, vencimento: new Date(2025, 10, 15), status: 'pendente' } as any);
+        } catch (e: any) {
+          const msg = String(e?.parent?.message || e?.message || '');
+          if (msg.includes('no such table')) {
+            await Fee.sync();
+            await new Promise(res => setTimeout(res, 50));
+            continue;
+          }
+          if (msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || e?.name === 'SequelizeTimeoutError') {
+            await new Promise(res => setTimeout(res, 100));
+            continue;
+          }
+          throw e;
+        }
+      }
+      throw new Error('Falha ao criar mensalidade extra para cancelamento após retries');
+    })();
     const cancelada = await controller.cancel(String(extra.id), { observacao: 'cancelada controller' });
     expect((cancelada as any).status).toBe('cancelado');
 

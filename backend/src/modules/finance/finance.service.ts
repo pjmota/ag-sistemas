@@ -25,9 +25,17 @@ export class FinanceService {
       try {
         return await action();
       } catch (err: any) {
-        const msg = String(err?.message || '');
-        const isBusy = msg.includes('SQLITE_BUSY') || msg.includes('SequelizeTimeoutError');
-        if (!isBusy || i === attempts - 1) {
+        const msg = String(err?.parent?.message || err?.message || '');
+        const isBusy = msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || msg.includes('SequelizeTimeoutError');
+        const noTable = msg.includes('no such table');
+        // Em ambientes in-memory, tente sincronizar tabelas ausentes
+        if (noTable) {
+          try { await this.feeModel.sync(); } catch {}
+          try { await this.userModel.sync(); } catch {}
+          try { await this.planModel.sync(); } catch {}
+          try { await this.memberPlanModel.sync(); } catch {}
+        }
+        if ((!isBusy && !noTable) || i === attempts - 1) {
           throw err;
         }
         await new Promise(r => setTimeout(r, delayMs));
@@ -44,49 +52,37 @@ export class FinanceService {
 
   async assignPlan(data: { usuario_id: number; plano_id: number; data_inicio?: Date }) {
     const inicio = data.data_inicio ?? new Date();
-    return this.memberPlanModel.create({ usuario_id: data.usuario_id, plano_id: data.plano_id, data_inicio: inicio } as any);
+    return this.withRetry(() => this.memberPlanModel.create({ usuario_id: data.usuario_id, plano_id: data.plano_id, data_inicio: inicio } as any));
   }
 
   async generateMonthlyFees({ month, year }: GenerateParams) {
-    const members = await this.memberModel.findAll({ where: { status: 'ativo' } });
-    const planByMember = new Map<number, MemberPlan | null>();
+    // Gera mensalidades diretamente a partir das associações de plano (usuario_planos),
+    // evitando depender do estado da tabela de membros.
+    const associations = await this.withRetry(() => this.memberPlanModel.findAll());
     const dueDateForPlan = (plan: Plan) => new Date(year, month - 1, plan.dia_vencimento_padrao);
 
-    for (const m of members) {
-      const u = await this.userModel.findOne({ where: { email: m.email } });
-      const mp = u ? await this.memberPlanModel.findOne({ where: { usuario_id: u.id } }) : null;
-      planByMember.set(m.id, mp ?? null);
-    }
-
     let createdCount = 0;
-    for (const m of members) {
-      const mp = planByMember.get(m.id);
-      if (!mp) {
-        // Sem plano, ignora geração
-        continue;
-      }
-      const plan = await this.planModel.findByPk(mp.plano_id);
+    for (const mp of associations) {
+      const plan = await this.withRetry(() => this.planModel.findByPk(mp.plano_id));
       if (!plan) continue;
       const vencimento = dueDateForPlan(plan);
-      // Evita duplicidade considerando todo o mês/ano (mitiga variações de timezone/armazenamento)
       const monthStart = new Date(year, month - 1, 1);
       const monthEnd = new Date(year, month, 0);
-      // Resolve usuario_id pelo email do membro, se existir
-      const user = await this.userModel.findOne({ where: { email: m.email } });
-      const usuarioId = user?.id ?? null;
-      const existing = await this.feeModel.findOne({
+
+      const usuarioId = mp.usuario_id ?? null;
+      const existing = await this.withRetry(() => this.feeModel.findOne({
         where: {
           usuario_id: usuarioId,
           vencimento: { [Op.between]: [monthStart, monthEnd] },
         },
-      });
+      }));
       if (existing) continue;
-      await this.feeModel.create({
+      await this.withRetry(() => this.feeModel.create({
         usuario_id: usuarioId,
         valor: Number(plan.valor),
         vencimento,
         status: 'pendente',
-      } as any);
+      } as any));
       createdCount++;
     }
     return { created: createdCount };

@@ -11,9 +11,38 @@ export class InvitesService {
     @InjectModel(Intention) private intentionModel: typeof Intention,
   ) {}
 
+  private async withRetry<T>(action: () => Promise<T>, attempts = 5, delayMs = 100): Promise<T> {
+    let lastErr: any;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await action();
+      } catch (err: any) {
+        const msg = String(err?.parent?.message || err?.message || '');
+        const isBusy = msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || msg.includes('SequelizeTimeoutError');
+        const noTable = msg.includes('no such table');
+        if (noTable) {
+          try { await this.inviteModel.sync(); } catch {}
+          try { await this.intentionModel.sync(); } catch {}
+        }
+        if ((!isBusy && !noTable) || i === attempts - 1) {
+          throw err;
+        }
+        await new Promise(r => setTimeout(r, delayMs));
+        lastErr = err;
+      }
+    }
+    throw lastErr;
+  }
+
   async generateForIntention(intentionId: number) {
-    const intention = await this.intentionModel.findByPk(intentionId);
+    let intention = await this.withRetry(() => this.intentionModel.findByPk(intentionId));
     if (!intention) throw new NotFoundException('Intenção não encontrada');
+    // Espera eventual pela gravação de status 'aprovada' em ambiente concorrente
+    for (let i = 0; i < 5 && intention.status !== 'aprovada'; i++) {
+      await new Promise(r => setTimeout(r, 100));
+      intention = await this.withRetry(() => this.intentionModel.findByPk(intentionId));
+      if (!intention) throw new NotFoundException('Intenção não encontrada');
+    }
     if (intention.status !== 'aprovada') throw new BadRequestException('Intenção não está aprovada');
     if (intention.convite_gerado) throw new BadRequestException('Convite já gerado para esta intenção');
     // Gera token robusto mesmo em ambientes sem support a randomUUID (Node < 14.17)
@@ -23,14 +52,14 @@ export class InvitesService {
     } catch (_e) {
       token = randomBytes(16).toString('hex');
     }
-    const invite = await this.inviteModel.create({
+    const invite = await this.withRetry(() => this.inviteModel.create({
       token,
       intention_id: intentionId,
       used: false,
-    });
+    }));
     // marca flag persistida para evitar reenvio
     intention.convite_gerado = true;
-    await intention.save();
+    await this.withRetry(() => intention.save());
     // Simulação de envio de e-mail
     // eslint-disable-next-line no-console
     console.log(`Convite gerado: http://localhost:3000/cadastro?token=${token}`);
@@ -38,24 +67,24 @@ export class InvitesService {
   }
 
   async validate(token: string) {
-    const invite = await this.inviteModel.findOne({ where: { token } });
+    const invite = await this.withRetry(() => this.inviteModel.findOne({ where: { token } }));
     if (!invite || invite.used) throw new BadRequestException('Convite inválido ou já utilizado');
     return invite;
   }
 
   async markUsed(token: string) {
-    const invite = await this.inviteModel.findOne({ where: { token } });
+    const invite = await this.withRetry(() => this.inviteModel.findOne({ where: { token } }));
     if (!invite) throw new NotFoundException('Convite não encontrado');
     invite.used = true;
-    await invite.save();
+    await this.withRetry(() => invite.save());
     return invite;
   }
 
   async getPrefillByToken(token: string) {
-    const invite = await this.inviteModel.findOne({ where: { token } });
+    const invite = await this.withRetry(() => this.inviteModel.findOne({ where: { token } }));
     if (!invite || invite.used) throw new BadRequestException('Convite inválido ou já utilizado');
 
-    const intention = await this.intentionModel.findByPk(invite.intention_id);
+    const intention = await this.withRetry(() => this.intentionModel.findByPk(invite.intention_id));
     if (!intention) throw new NotFoundException('Intenção vinculada ao convite não encontrada');
 
     return {

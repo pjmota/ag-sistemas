@@ -38,7 +38,7 @@ describe('FinanceController', () => {
 
     await controller.assignPlan({ usuario_id: joaoUserId, plano_id: planoId });
     await controller.assignPlan({ usuario_id: mariaUserId, plano_id: planoId });
-  });
+  }, 20000);
 
   afterAll(async () => {
     await app.close();

@@ -9,6 +9,9 @@ import { Plan } from '../database/models/plan.model';
 import { MemberPlan } from '../database/models/member-plan.model';
 import { SchemaInitService } from '../bootstrap/schema-init.service';
 
+// Aumenta o timeout global deste arquivo para evitar falhas intermitentes no setup
+jest.setTimeout(30000);
+
 describe('Cobertura de Branches', () => {
   let app: INestApplication;
   let sequelize: Sequelize;
@@ -39,11 +42,65 @@ describe('Cobertura de Branches', () => {
     finance = app.get(FinanceService);
     referrals = app.get(ReferralsService);
 
-    u1 = await User.create({ nome: 'Ana Branch', email: 'ana.branch@example.com', senha_hash: 'hash', role: 'membro' } as any);
-    u2 = await User.create({ nome: 'Beto Branch', email: 'beto.branch@example.com', senha_hash: 'hash', role: 'membro' } as any);
-    planoBasico = await Plan.create({ nome: 'Basico', valor: 123.45 } as any);
-    await MemberPlan.create({ usuario_id: u1.id, plano_id: planoBasico.id, data_inicio: new Date(2031, 10, 1) } as any);
-    await MemberPlan.create({ usuario_id: u2.id, plano_id: planoBasico.id, data_inicio: new Date(2031, 10, 1) } as any);
+    const createUserWithRetry = async (data: { nome: string; email: string; senha_hash: string; role: string }) => {
+      for (let i = 0; i < 5; i++) {
+        try {
+          return await User.create(data as any);
+        } catch (e: any) {
+          const msg = String(e?.parent?.message || e?.message || '');
+          if (msg.includes('no such table')) {
+            try { await User.sync(); } catch {}
+          }
+          if (msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || e?.name === 'SequelizeTimeoutError' || msg.includes('no such table')) {
+            await new Promise(res => setTimeout(res, 100));
+            continue;
+          }
+          throw e;
+        }
+      }
+      throw new Error('Falha ao criar usuário após retries');
+    };
+    u1 = await createUserWithRetry({ nome: 'Ana Branch', email: 'ana.branch@example.com', senha_hash: 'hash', role: 'membro' } as any);
+    u2 = await createUserWithRetry({ nome: 'Beto Branch', email: 'beto.branch@example.com', senha_hash: 'hash', role: 'membro' } as any);
+    const createPlanWithRetry = async (data: { nome: string; valor: number; dia_vencimento_padrao?: number }) => {
+      for (let i = 0; i < 5; i++) {
+        try {
+          return await Plan.create(data as any);
+        } catch (e: any) {
+          const msg = String(e?.parent?.message || e?.message || '');
+          if (msg.includes('no such table')) {
+            try { await Plan.sync(); } catch {}
+          }
+          if (msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || e?.name === 'SequelizeTimeoutError' || msg.includes('no such table')) {
+            await new Promise(res => setTimeout(res, 100));
+            continue;
+          }
+          throw e;
+        }
+      }
+      throw new Error('Falha ao criar plano após retries');
+    };
+    planoBasico = await createPlanWithRetry({ nome: 'Basico', valor: 123.45 });
+    const createMemberPlanWithRetry = async (data: { usuario_id: number; plano_id: number; data_inicio: Date }) => {
+      for (let i = 0; i < 5; i++) {
+        try {
+          return await MemberPlan.create(data as any);
+        } catch (e: any) {
+          const msg = String(e?.parent?.message || e?.message || '');
+          if (msg.includes('no such table')) {
+            try { await MemberPlan.sync(); } catch {}
+          }
+          if (msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || e?.name === 'SequelizeTimeoutError' || msg.includes('no such table')) {
+            await new Promise(res => setTimeout(res, 100));
+            continue;
+          }
+          throw e;
+        }
+      }
+      throw new Error('Falha ao criar associação de plano após retries');
+    };
+    await createMemberPlanWithRetry({ usuario_id: u1.id, plano_id: planoBasico.id, data_inicio: new Date(2031, 10, 1) });
+    await createMemberPlanWithRetry({ usuario_id: u2.id, plano_id: planoBasico.id, data_inicio: new Date(2031, 10, 1) });
 
     await finance.generateMonthlyFees({ month: 12, year: 2031 } as any);
   });

@@ -26,14 +26,6 @@ export class SchemaInitService implements OnModuleInit {
         await qi.addColumn('usuarios', 'ativo', { type: DataTypes.BOOLEAN, allowNull: true, defaultValue: true });
         // eslint-disable-next-line no-console
         console.log('[SchemaInit] Adicionada coluna usuarios.ativo');
-        try {
-          await this.sequelize.query(
-            `UPDATE usuarios SET ativo = 1 WHERE ativo IS NULL;`
-          );
-        } catch (e) {
-          // eslint-disable-next-line no-console
-          console.warn('[SchemaInit] Falha ao backfill usuarios.ativo para 1 (true):', e);
-        }
       }
       // Backfill inicial: preenche usuarios.nome/empresa a partir de membros por email, quando ausente
       try {

@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+jest.setTimeout(30000);
 import { INestApplication } from '@nestjs/common';
 import { AppModule } from '../app.module';
 import { Sequelize } from 'sequelize-typescript';

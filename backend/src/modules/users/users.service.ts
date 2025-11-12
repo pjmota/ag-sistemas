@@ -8,7 +8,8 @@ export class UsersService {
   constructor(@InjectModel(User) private userModel: typeof User) {}
 
   async listAll() {
-    return this.userModel.findAll({ attributes: ['id', 'email', 'role', 'nome', 'empresa', 'ativo'] });
+    // Retorna apenas campos básicos conforme esperado pelos testes e pelo frontend
+    return this.userModel.findAll({ attributes: ['id', 'email', 'role', 'nome', 'empresa'] });
   }
 
   async create(

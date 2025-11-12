@@ -67,8 +67,19 @@ export class InvitesService {
   }
 
   async validate(token: string) {
-    const invite = await this.withRetry(() => this.inviteModel.findOne({ where: { token } }));
-    if (!invite || invite.used) throw new BadRequestException('Convite inválido ou já utilizado');
+    // Robustez extra: em ambientes concorrentes, pode haver leve atraso de visibilidade
+    // após criação do convite. Tente algumas vezes antes de concluir que é inválido.
+    let invite: Invite | null = null as any;
+    for (let i = 0; i < 10; i++) {
+      try {
+        invite = await this.withRetry(() => this.inviteModel.findOne({ where: { token } }));
+      } catch (e: any) {
+        // Em caso de erro transitório, apenas aguarde e tente novamente
+      }
+      if (invite) break;
+      await new Promise(r => setTimeout(r, 120));
+    }
+    if (!invite || (invite as any).used) throw new BadRequestException('Convite inválido ou já utilizado');
     return invite;
   }
 

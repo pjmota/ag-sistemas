@@ -16,9 +16,14 @@ export class IntentionsService {
       try {
         return await action();
       } catch (err: any) {
-        const msg = String(err?.message || '');
+        const msg = String(err?.parent?.message || err?.message || '');
         const isBusy = msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || msg.includes('SequelizeTimeoutError');
-        if (!isBusy || i === attempts - 1) {
+        const noTable = msg.includes('no such table');
+        if (noTable) {
+          try { await (this.intentionModel as any).sync(); } catch {}
+          try { await (this.memberModel as any).sync(); } catch {}
+        }
+        if ((!isBusy && !noTable) || i === attempts - 1) {
           throw err;
         }
         await new Promise(r => setTimeout(r, delayMs));
@@ -45,12 +50,20 @@ export class IntentionsService {
     if (status === 'aprovada') {
       const existing = await this.withRetry(() => this.memberModel.findOne({ where: { email: intention.email } }));
       if (!existing) {
-        await this.withRetry(() => this.memberModel.create({
-          nome: intention.nome,
-          email: intention.email,
-          empresa: intention.empresa || null,
-          status: 'pendente',
-        } as any));
+        // Idempotente: tenta criar e ignora erro de UNIQUE se já existir
+        try {
+          await this.withRetry(() => this.memberModel.create({
+            nome: intention.nome,
+            email: intention.email,
+            empresa: intention.empresa || null,
+            status: 'pendente',
+          } as any));
+        } catch (err: any) {
+          const msg = String(err?.parent?.message || err?.message || '');
+          const isUnique = msg.includes('UNIQUE') || err?.name === 'SequelizeUniqueConstraintError';
+          if (!isUnique) throw err;
+          // UNIQUE: entrada já criada em corrida concorrente; segue sem falhar
+        }
       }
     }
     return intention;

@@ -27,6 +27,7 @@ export class FinanceService {
       } catch (err: any) {
         const msg = String(err?.parent?.message || err?.message || '');
         const isBusy = msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || msg.includes('SequelizeTimeoutError');
+        const isReadonly = msg.includes('SQLITE_READONLY') || msg.includes('readonly database');
         const noTable = msg.includes('no such table');
         // Em ambientes in-memory, tente sincronizar tabelas ausentes
         if (noTable) {
@@ -35,7 +36,7 @@ export class FinanceService {
           try { await this.planModel.sync(); } catch {}
           try { await this.memberPlanModel.sync(); } catch {}
         }
-        if ((!isBusy && !noTable) || i === attempts - 1) {
+        if ((!isBusy && !noTable && !isReadonly) || i === attempts - 1) {
           throw err;
         }
         await new Promise(r => setTimeout(r, delayMs));
@@ -75,30 +76,46 @@ export class FinanceService {
         ? this.memberPlanModel.findAll({ where: { usuario_id } })
         : this.memberPlanModel.findAll()
     );
-    const dueDateForPlan = (plan: Plan) => new Date(year, month - 1, plan.dia_vencimento_padrao);
+    const dueDateForPlan = (plan: Plan) => {
+      const monthIndex = month - 1;
+      // Ajusta dia de vencimento para não extrapolar o último dia do mês
+      const lastDay = new Date(year, month, 0).getDate();
+      const day = Math.min(Number(plan.dia_vencimento_padrao) || 10, lastDay);
+      return new Date(year, monthIndex, day);
+    };
 
     let createdCount = 0;
+    // Pré-carrega mensalidades já existentes do mês/ano para evitar duplicidade
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0);
+    const existingFees = await this.withRetry(() => this.feeModel.findAll({
+      where: {
+        vencimento: { [Op.between]: [monthStart, monthEnd] },
+        status: { [Op.ne]: 'cancelado' },
+      },
+      attributes: ['usuario_id'],
+    }));
+    const existingByUser = new Set<number>(
+      existingFees
+        .map((f: any) => f.usuario_id)
+        .filter((id: any): id is number => typeof id === 'number')
+    );
+
     for (const mp of associations) {
       const plan = await this.withRetry(() => this.planModel.findByPk(mp.plano_id));
-      if (!plan) continue;
+      // Ignora se plano não existe ou está inativo
+      if (!plan || plan.ativo === false) continue;
+      const usuarioId = mp.usuario_id;
+      // Evita criar duplicatas por usuário dentro do mesmo mês
+      if (existingByUser.has(usuarioId)) continue;
       const vencimento = dueDateForPlan(plan);
-      const monthStart = new Date(year, month - 1, 1);
-      const monthEnd = new Date(year, month, 0);
-
-      const usuarioId = mp.usuario_id ?? null;
-      const existing = await this.withRetry(() => this.feeModel.findOne({
-        where: {
-          usuario_id: usuarioId,
-          vencimento: { [Op.between]: [monthStart, monthEnd] },
-        },
-      }));
-      if (existing) continue;
       await this.withRetry(() => this.feeModel.create({
         usuario_id: usuarioId,
         valor: Number(plan.valor),
         vencimento,
         status: 'pendente',
       } as any));
+      existingByUser.add(usuarioId);
       createdCount++;
     }
     return { created: createdCount };
@@ -149,7 +166,7 @@ export class FinanceService {
     if (!fee) throw new NotFoundException('Mensalidade não encontrada');
     fee.status = 'pago';
     fee.data_pagamento = data_pagamento ?? new Date();
-    await fee.save();
+    await this.withRetry(() => fee.save());
     return fee;
   }
 
@@ -161,7 +178,7 @@ export class FinanceService {
     const fee = await this.feeModel.findByPk(id);
     if (!fee) throw new NotFoundException('Mensalidade não encontrada');
     fee.usuario_id = typeof usuario_id === 'number' ? usuario_id : null as any;
-    await fee.save();
+    await this.withRetry(() => fee.save());
     return fee;
   }
 
@@ -172,7 +189,7 @@ export class FinanceService {
     for (const f of pendentes) {
       if (f.vencimento < now) {
         f.status = 'atrasado';
-        await f.save();
+        await this.withRetry(() => f.save());
         updated++;
       }
     }
@@ -196,11 +213,11 @@ export class FinanceService {
     if (!fee) throw new NotFoundException('Mensalidade não encontrada');
     if (fee.status === 'pendente' && fee.vencimento < new Date()) {
       fee.status = 'atrasado';
-      await fee.save();
+      await this.withRetry(() => fee.save());
     }
     // Apenas simula o registro de notificação
     fee.observacao = `${fee.observacao ? fee.observacao + ' | ' : ''}notificado atraso em ${new Date().toISOString().slice(0, 10)}`;
-    await fee.save();
+    await this.withRetry(() => fee.save());
     return fee;
   }
 
@@ -208,7 +225,7 @@ export class FinanceService {
     const fee = await this.feeModel.findByPk(id);
     if (!fee) throw new NotFoundException('Mensalidade não encontrada');
     fee.observacao = `${fee.observacao ? fee.observacao + ' | ' : ''}lembrete enviado em ${new Date().toISOString().slice(0, 10)}`;
-    await fee.save();
+    await this.withRetry(() => fee.save());
     return fee;
   }
 }

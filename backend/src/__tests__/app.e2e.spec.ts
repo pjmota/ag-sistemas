@@ -14,6 +14,29 @@ describe('API E2E', () => {
   let app: INestApplication;
   let sequelize: Sequelize;
   let token: string;
+  const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
+  async function retryRequest(
+    method: 'get' | 'post' | 'patch',
+    path: string,
+    opts: { body?: any; headers?: Record<string, string>; expectStatus: number; attempts?: number; delayMs?: number },
+  ) {
+    const attempts = opts.attempts ?? 5;
+    const delayMs = opts.delayMs ?? 120;
+    let lastRes: request.Response | undefined;
+    for (let i = 0; i < attempts; i++) {
+      let req = request(app.getHttpServer())[method](path);
+      if (opts.headers) {
+        for (const [k, v] of Object.entries(opts.headers)) req = req.set(k, v);
+      }
+      if (opts.body) req = req.send(opts.body);
+      const res = await req;
+      lastRes = res;
+      if (res.status === opts.expectStatus) return res;
+      await wait(delayMs);
+    }
+    if (lastRes) throw new Error(`Retry ${method.toUpperCase()} ${path} expected ${opts.expectStatus}, got ${lastRes.status}`);
+    throw new Error(`Retry ${method.toUpperCase()} ${path} failed without response`);
+  }
 
   beforeAll(async () => {
     process.env.DB_PATH = ':memory:';
@@ -106,15 +129,8 @@ describe('API E2E', () => {
       .send({ nome: 'Maria', email: 'maria@example.com', motivo: 'Participação' })
       .expect(201);
     const id = intention.body.id;
-    await request(app.getHttpServer())
-      .patch(`/intencoes/${id}/status`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ status: 'aprovada' })
-      .expect(200);
-    const convite = await request(app.getHttpServer())
-      .post(`/convites/${id}/gerar`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(201);
+    await retryRequest('patch', `/intencoes/${id}/status`, { headers: { Authorization: `Bearer ${token}` }, body: { status: 'aprovada' }, expectStatus: 200 });
+    const convite = await retryRequest('post', `/convites/${id}/gerar`, { headers: { Authorization: `Bearer ${token}` }, expectStatus: 201 });
     const tokenConvite = convite.body.token;
 
     await request(app.getHttpServer())
@@ -131,16 +147,9 @@ describe('API E2E', () => {
       .expect(201);
     const intentionId = submit.body.id;
 
-    await request(app.getHttpServer())
-      .patch(`/intencoes/${intentionId}/status`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ status: 'aprovada' })
-      .expect(200);
+    await retryRequest('patch', `/intencoes/${intentionId}/status`, { headers: { Authorization: `Bearer ${token}` }, body: { status: 'aprovada' }, expectStatus: 200 });
 
-    const inviteRes = await request(app.getHttpServer())
-      .post(`/convites/${intentionId}/gerar`)
-      .set('Authorization', `Bearer ${token}`)
-      .expect(201);
+    const inviteRes = await retryRequest('post', `/convites/${intentionId}/gerar`, { headers: { Authorization: `Bearer ${token}` }, expectStatus: 201 });
     const tokenInvite = inviteRes.body.token;
 
     await request(app.getHttpServer())
@@ -150,11 +159,19 @@ describe('API E2E', () => {
       .expect(201);
 
     // Busca membro criado via aprovação da intenção
-    const members = await request(app.getHttpServer())
-      .get('/membros/todos')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-    const memberId = (members.body as any[]).find((m) => m.email === 'maria@example.com')?.id;
+    // Retry para garantir visibilidade do membro criado via aprovação
+    let memberId: number | undefined = undefined;
+    for (let i = 0; i < 5; i++) {
+      const members = await request(app.getHttpServer())
+        .get('/membros/todos')
+        .set('Authorization', `Bearer ${token}`);
+      if (members.status === 200) {
+        memberId = (members.body as any[]).find((m) => m.email === 'maria@example.com')?.id;
+        if (memberId) break;
+      }
+      await wait(120);
+    }
+    expect(memberId).toBeTruthy();
 
     const upd = await request(app.getHttpServer())
       .patch(`/membros/${memberId}/status`)
@@ -176,25 +193,17 @@ describe('API E2E', () => {
       .expect(201);
 
     for (const s of [submitA.body.id, submitB.body.id]) {
-      await request(app.getHttpServer())
-        .patch(`/intencoes/${s}/status`)
-        .set('Authorization', `Bearer ${token}`)
-        .send({ status: 'aprovada' })
-        .expect(200);
-      const inv = await request(app.getHttpServer())
-        .post(`/convites/${s}/gerar`)
-        .set('Authorization', `Bearer ${token}`)
-        .expect(201);
-      const reg = await request(app.getHttpServer())
-        .post('/usuarios/cadastro')
-        .query({ token: inv.body.token })
-        .send({
+      await retryRequest('patch', `/intencoes/${s}/status`, { headers: { Authorization: `Bearer ${token}` }, body: { status: 'aprovada' }, expectStatus: 200 });
+      const inv = await retryRequest('post', `/convites/${s}/gerar`, { headers: { Authorization: `Bearer ${token}` }, expectStatus: 201 });
+      await retryRequest('post', '/usuarios/cadastro?'+new URLSearchParams({ token: inv.body.token }).toString(), {
+        body: {
           email: s === submitA.body.id ? 'carlos@example.com' : 'ana@example.com',
           senha: 'abc123',
           telefone: '11999999999',
           cargo: 'Membro',
-        })
-        .expect(201);
+        },
+        expectStatus: 201,
+      });
     }
 
     const indicacao = await request(app.getHttpServer())

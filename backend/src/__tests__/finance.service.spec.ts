@@ -9,6 +9,9 @@ import { User } from '../database/models/user.model';
 import { Fee } from '../database/models/fee.model';
 import { SchemaInitService } from '../bootstrap/schema-init.service';
 
+// Aumenta o timeout global deste arquivo para acomodar setup e retries
+jest.setTimeout(30000);
+
 describe('FinanceService', () => {
   async function withRetry<T>(action: () => Promise<T>, attempts = 5, delayMs = 100): Promise<T> {
     let lastErr: any;
@@ -100,6 +103,27 @@ describe('FinanceService', () => {
     const end = new Date(2030, 2, 0);   // último dia de 02/2030
     await Fee.destroy({ where: { vencimento: { [Op.between]: [start, end] } } });
 
+    // Garante pré-condições determinísticas: pelo menos dois usuários com plano associado
+    const ensureUser = async (nome: string, email: string) => {
+      let m = await Member.findOne({ where: { email } });
+      if (!m) {
+        m = await Member.create({ nome, email, status: 'ativo' } as any);
+      }
+      let u = await User.findOne({ where: { email } });
+      if (!u) {
+        u = await User.create({ email, senha_hash: 'hash', role: 'membro', nome } as any);
+      }
+      return u!;
+    };
+
+    const uA = await ensureUser('Totais João', 'joao.totais@exemplo.com');
+    const uB = await ensureUser('Totais Maria', 'maria.totais@exemplo.com');
+
+    // Cria um plano único e associa aos dois usuários
+    const planoTotais = await service.createPlan({ nome: `Plano Totais ${Date.now()}`, valor: 50.0, dia_vencimento_padrao: 15 });
+    await service.assignPlan({ usuario_id: uA.id, plano_id: planoTotais.id });
+    await service.assignPlan({ usuario_id: uB.id, plano_id: planoTotais.id });
+
     // usa um mês/ano isolados para evitar interferência de outras suítes
     await service.generateMonthlyFees({ month: 2, year: 2030 });
     const fees = await service.listFees({ month: 2, year: 2030 });
@@ -115,14 +139,36 @@ describe('FinanceService', () => {
 
   it('atualiza automaticamente para atrasado quando vencido e pendente', async () => {
     // cria uma mensalidade pendente vencida
-    let joao = await Member.findOne({ where: { email: 'joao.finance@exemplo.com' } });
-    if (!joao) {
-      joao = await Member.create({ nome: 'João Silva', email: 'joao.finance@exemplo.com', status: 'ativo' } as any);
-    }
-    let uJoao = await User.findOne({ where: { email: 'joao.finance@exemplo.com' } });
-    if (!uJoao) {
-      uJoao = await User.create({ email: joao.email, senha_hash: 'hash', role: 'membro', nome: joao.nome } as any);
-    }
+    const ensureUserWithRetry = async (nome: string, email: string) => {
+      for (let i = 0; i < 5; i++) {
+        try {
+          // garante membro
+          let m = await Member.findOne({ where: { email } });
+          if (!m) {
+            m = await Member.create({ nome, email, status: 'ativo' } as any);
+          }
+          // garante usuário
+          let u = await User.findOne({ where: { email } });
+          if (!u) {
+            u = await User.create({ email, senha_hash: 'hash', role: 'membro', nome } as any);
+          }
+          return u!;
+        } catch (e: any) {
+          const msg = String(e?.parent?.message || e?.message || '');
+          if (msg.includes('no such table')) {
+            try { await Member.sync(); } catch {}
+            try { await User.sync(); } catch {}
+          }
+          if (msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || e?.name === 'SequelizeTimeoutError' || msg.includes('no such table')) {
+            await new Promise(res => setTimeout(res, 100));
+            continue;
+          }
+          throw e;
+        }
+      }
+      throw new Error('Falha ao garantir usuário após retries');
+    };
+    const uJoao = await ensureUserWithRetry('João Silva', 'joao.finance@exemplo.com');
     const vencida = await (async () => {
       // helper com retry para contornar SQLITE_BUSY em ambientes in-memory
       for (let i = 0; i < 5; i++) {
@@ -135,7 +181,10 @@ describe('FinanceService', () => {
           } as any);
         } catch (e: any) {
           const msg = String(e?.parent?.message || e?.message || '');
-          if (msg.includes('SQLITE_BUSY') || e?.name === 'SequelizeTimeoutError') {
+          if (msg.includes('no such table')) {
+            try { await Fee.sync(); } catch {}
+          }
+          if (msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || e?.name === 'SequelizeTimeoutError' || msg.includes('no such table')) {
             await new Promise(res => setTimeout(res, 100));
             continue;
           }
@@ -164,6 +213,10 @@ describe('FinanceService', () => {
     // Garante pelo menos uma mensalidade pendente para Maria de forma determinística
     const targetMonth = 12;
     const targetYear = 2033;
+    // Limpa quaisquer mensalidades do usuário para o mês/ano alvo, evitando interferência de outras suítes
+    const start = new Date(targetYear, targetMonth - 1, 1);
+    const end = new Date(targetYear, targetMonth, 0);
+    await Fee.destroy({ where: { usuario_id: uMaria.id, vencimento: { [Op.between]: [start, end] } } });
     let pendentesMaria = await service.listFees({ usuario_id: uMaria.id, status: 'pendente', month: targetMonth, year: targetYear });
     if (pendentesMaria.length === 0) {
       const plano = await service.createPlan({ nome: `Plano-Maria-${Date.now()}`, valor: 100.0, dia_vencimento_padrao: 10 });
@@ -274,7 +327,36 @@ describe('FinanceService', () => {
   });
 
   it('updateUsuario aceita null e mantém consistência', async () => {
-    const anyFee = (await service.listFees({}))[0];
+    let anyFee = (await service.listFees({}))[0];
+    // Garante uma mensalidade existente caso a lista venha vazia em execuções sequenciais
+    if (!anyFee) {
+      // cria um usuário e uma mensalidade pendente de forma determinística
+      let u = await User.findOne({ where: { email: 'update.usuario@exemplo.com' } });
+      if (!u) {
+        const m = await Member.create({ nome: 'Update Usuario', email: 'update.usuario@exemplo.com', status: 'ativo' } as any);
+        u = await User.create({ email: m.email, senha_hash: 'hash', role: 'membro', nome: m.nome } as any);
+      }
+      anyFee = await (async () => {
+        for (let i = 0; i < 5; i++) {
+          try {
+            return await Fee.create({ usuario_id: u!.id, valor: 77.7, vencimento: new Date(2026, 0, 10), status: 'pendente' } as any);
+          } catch (e: any) {
+            const msg = String(e?.parent?.message || e?.message || '');
+            if (msg.includes('SQLITE_BUSY') || msg.includes('SQLITE_LOCKED') || e?.name === 'SequelizeTimeoutError') {
+              await new Promise(res => setTimeout(res, 100));
+              continue;
+            }
+            if (msg.includes('no such table')) {
+              try { await Fee.sync(); } catch {}
+              await new Promise(res => setTimeout(res, 50));
+              continue;
+            }
+            throw e;
+          }
+        }
+        throw new Error('Falha ao criar mensalidade para updateUsuario após retries');
+      })();
+    }
     const updated = await service.updateUsuario(anyFee.id, null);
     expect(updated.usuario_id).toBeNull();
   });

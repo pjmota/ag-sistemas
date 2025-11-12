@@ -1,0 +1,29 @@
+/* Container do header das abas */
+.tabHeader {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  gap: 8px;
+}
+
+/* Botão de aba */
+.tabButton {
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #6b7280; /* default */
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+}
+
+/* Estado ativo */
+.active {
+  color: #111827;
+  font-weight: 600;
+  border-bottom-color: #111827;
+}
+
+/* Conteúdo das abas */
+.tabContent {
+  padding-top: 12px;
+}

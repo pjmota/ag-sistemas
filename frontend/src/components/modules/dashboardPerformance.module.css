@@ -1,0 +1,33 @@
+/* Grid de KPIs */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* Mensagem de erro */
+.errorText {
+  color: red;
+}
+
+/* Card de KPI */
+.kpiCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 100px;
+}
+
+.kpiTitle {
+  color: #374151;
+  font-size: 14px;
+}
+
+.kpiValue {
+  font-size: 28px;
+  font-weight: 700;
+}

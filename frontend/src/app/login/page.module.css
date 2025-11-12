@@ -1,0 +1,52 @@
+/* Estilos locais da página de Login */
+
+.page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: #c9c9c9;
+}
+
+.container {
+  width: 100%;
+  max-width: 520px;
+}
+
+
+.logoWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.logo {
+  width: 310px;
+  height: auto;
+  display: block;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.fieldLarge {
+  margin-bottom: 16px;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.button {
+  padding-left: 80px;
+  padding-right: 80px;
+}

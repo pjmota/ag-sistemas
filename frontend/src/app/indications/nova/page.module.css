@@ -1,0 +1,56 @@
+/* Estilos da página Nova Indicação */
+
+.page {
+  padding: 24px;
+}
+
+.error {
+  color: #b32d2e;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 520px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input {
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #000;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #000;
+  cursor: pointer;
+}
+
+.buttonSubmit {
+  background: #e5e7eb;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

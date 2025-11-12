@@ -1,0 +1,28 @@
+/* Container do campo */
+.field {
+  margin-bottom: 16px;
+}
+
+/* Label do campo */
+.label {
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* Input base */
+.input {
+  width: 100%;
+  padding: 8px 12px; /* px-3 py-2 */
+  border-radius: 6px; /* rounded */
+  border: 1px solid #d1d5db; /* border-gray-300 */
+}
+
+/* Estado de erro */
+.inputError {
+  border-color: #ef4444; /* border-red-500 */
+}
+
+/* Mensagem de erro */
+.errorText {
+  color: red;
+}

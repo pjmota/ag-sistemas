@@ -1,0 +1,42 @@
+/* Basic styles for PlansTab */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.tableWrap {
+  overflow: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.th, .td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 8px;
+  text-align: left;
+}
+.emptyCell {
+  padding: 16px;
+  text-align: center;
+  color: #6b7280;
+}
+.error {
+  color: #b91c1c;
+  margin-bottom: 8px;
+}
+.formRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.input, .select {
+  padding: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}

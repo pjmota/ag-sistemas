@@ -1,0 +1,85 @@
+/* Base form styles, configurable via CSS variables per form */
+.form {
+  max-width: var(--form-max-width, 560px);
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--form-actions-margin-top, 8px);
+}
+
+.successText {
+  margin-top: var(--form-message-margin-top, 12px);
+  color: var(--form-success-color, green);
+}
+
+.errorText {
+  margin-top: var(--form-message-margin-top, 12px);
+  color: var(--form-error-color, red);
+}
+
+.hintText {
+  font-size: 12px;
+  color: var(--form-hint-color, #6b7280);
+  margin: var(--form-hint-margin, 8px 0);
+  text-align: center;
+}
+
+.hintLink {
+  text-decoration: underline;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.fieldLabel {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.fieldControl {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: var(--form-input-color, #000);
+}
+
+/* Per-form variable presets */
+.intentionVars {
+  --form-max-width: 560px;
+  --form-success-color: green;
+  --form-error-color: red;
+  --form-message-margin-top: 12px;
+  --form-hint-color: #6b7280;
+  --form-hint-margin: 8px 0;
+  --form-actions-margin-top: 8px;
+}
+
+.indicationVars {
+  --form-max-width: 720px;
+  --form-success-color: green;
+  --form-error-color: red;
+  --form-message-margin-top: 12px;
+  --form-input-color: #000;
+}
+
+.completeRegistrationVars {
+  --form-max-width: 720px;
+  --form-success-color: green;
+  --form-error-color: #b32d2e;
+  --form-message-margin-top: 12px;
+}
+
+/* Layout utilitário para duas colunas no cadastro completo */
+.gridTwoCols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.spanTwoCols {
+  grid-column: 1 / -1;
+}

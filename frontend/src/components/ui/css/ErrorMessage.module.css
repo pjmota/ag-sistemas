@@ -1,0 +1,6 @@
+/* Mensagem de erro padronizada */
+
+.alert {
+  color: #b00020;
+  margin-bottom: 12px;
+}

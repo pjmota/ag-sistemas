@@ -1,0 +1,165 @@
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #000;
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: #e5e7eb;
+}
+
+.iconButton:focus {
+  outline: none;
+}
+
+/* Estado desabilitado visível e não clicável */
+.iconButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+.iconButton:disabled:hover {
+  background: #f3f4f6;
+}
+
+.modalDialog {
+  border: none;
+  padding: 0;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.modalDialog::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.modalCard {
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 8px;
+  width: 520px;
+  max-width: 90%;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Cabeçalho da lista e botão */
+.listHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.listTitle {
+  margin: 0;
+}
+
+.button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  color: #000;
+  cursor: pointer;
+}
+
+.buttonPrimary {
+  background: #e5e7eb;
+}
+
+.buttonSecondary {
+  background: #fff;
+}
+
+.errorText {
+  color: red;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+/* Tabela */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.thLeft {
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 8px;
+}
+
+.cell {
+  border-bottom: 1px solid #f3f4f6;
+  padding: 8px;
+}
+
+.cellWrap {
+  white-space: pre-wrap;
+}
+
+.statusCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.col30 { width: 30%; }
+.col50 { width: 50%; }
+.col20 { width: 20%; }
+.col25 { width: 25%; }
+.col40 { width: 40%; }
+.col15 { width: 15%; }
+
+/* Modal */
+.modalTitle {
+  margin: 0;
+  margin-bottom: 12px;
+}
+
+.formFields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.select {
+  padding: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #000;
+}
+
+.textarea {
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #000;
+  resize: vertical;
+}
+
+.modalActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

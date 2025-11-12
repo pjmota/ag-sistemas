@@ -1,0 +1,44 @@
+/* Estilos locais da página de Cadastro Completo, alinhados com login/intenções */
+
+.page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: #c9c9c9;
+}
+
+.container {
+  width: 100%;
+  max-width: 720px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.contentWrap {
+  margin-top: 8px;
+}
+
+.loading {
+  margin-top: 12px;
+}
+
+.error {
+  margin-top: 12px;
+  color: #b32d2e;
+}
+
+.formWrap {
+  margin-top: 16px;
+}

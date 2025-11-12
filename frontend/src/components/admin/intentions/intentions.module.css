@@ -1,0 +1,146 @@
+/* Styles for IntentionsTable interactive controls */
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.iconButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.iconButton:focus {
+  outline: none;
+}
+
+.tooltipContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: -34px;
+  background: rgba(17, 24, 39, 0.95);
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0s;
+  z-index: 10;
+}
+
+.tooltipContainer:hover .tooltip,
+.tooltipContainer:focus-within .tooltip {
+  opacity: 1;
+}
+
+/* Layout and table styling */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.error {
+  margin-bottom: 12px;
+  color: #b32d2e;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.th {
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  padding: 8px;
+}
+
+.td {
+  padding: 8px;
+}
+
+.emptyCell {
+  padding: 12px;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* Dialog modal styles for UsersTable Edit modal */
+.dialogModal {
+  border: none;
+  border-radius: 8px;
+  padding: 16px;
+  width: 560px;
+  max-width: 90%;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.dialogModal::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+/* Actions row (replaces inline styles in IntentionActions) */
+.actionsRow {
+  display: flex;
+  gap: 8px;
+}
+
+/* Icon color variants */
+.approve {
+  color: #16a34a;
+}
+
+.reject {
+  color: #dc2626;
+}
+
+.invite {
+  color: #374151;
+}
+
+/* Status chip base */
+.statusChip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+/* Status chip variants */
+.statusApproved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.statusRejected {
+  background: #efa4a4;
+  color: #7f1d1d;
+}
+
+.statusPending {
+  background: #fff9a8;
+  color: #111827;
+}

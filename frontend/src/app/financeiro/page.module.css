@@ -1,0 +1,84 @@
+/* Estilos da página Financeiro extraídos do JSX */
+
+.page {
+  padding: 24px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.filters {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inputYear {
+  width: 100px;
+}
+
+.button {
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #111827;
+}
+
+.summary {
+  margin-top: 12px;
+}
+
+.error {
+  margin-top: 12px;
+  color: #a00;
+}
+
+.section {
+  margin-top: 16px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 8px;
+}
+
+.cellId {
+  padding: 8px 0;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #111827;
+}
+
+.empty {
+  margin-top: 12px;
+}
+
+.loading {
+  margin-top: 12px;
+}

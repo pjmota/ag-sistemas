@@ -1,0 +1,184 @@
+/* Shared styles for Users section */
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.iconButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.iconButton:focus {
+  outline: none;
+}
+
+.tooltipContainer {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: -34px;
+  background: rgba(17, 24, 39, 0.95);
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0s;
+  z-index: 10;
+}
+
+.tooltipContainer:hover .tooltip,
+.tooltipContainer:focus-within .tooltip {
+  opacity: 1;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.error {
+  margin-bottom: 12px;
+  color: #b32d2e;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.th {
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  padding: 8px;
+}
+
+.td {
+  padding: 8px;
+}
+
+.emptyCell {
+  padding: 12px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.actionsRow {
+  display: flex;
+  gap: 8px;
+}
+
+.approve {
+  color: #16a34a;
+}
+
+.reject {
+  color: #dc2626;
+}
+
+.invite {
+  color: #374151;
+}
+
+/* EditUserModal styles (merged from user.module.css) */
+.dialogModal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: none;
+  border-radius: 8px;
+  padding: 16px;
+  width: 560px;
+  max-width: 90%;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.dialogModal::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.title {
+  margin: 0;
+  margin-bottom: 12px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.fullWidth {
+  grid-column: 1 / -1;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input {
+  padding: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.inputReadOnly {
+  padding: 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f9fafb;
+}
+
+.select {
+  padding: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.textarea {
+  padding: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  min-height: 80px;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cancelButton {
+  background: #fff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+}

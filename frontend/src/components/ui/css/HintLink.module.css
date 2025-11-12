@@ -1,0 +1,12 @@
+/* Texto auxiliar com link para intenções */
+
+.hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 8px 0;
+  text-align: center;
+}
+
+.hintLink {
+  text-decoration: underline;
+}

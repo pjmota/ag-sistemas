@@ -1,0 +1,33 @@
+/* Estilos locais da página de Intenções, alinhados com o login */
+
+.page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: #c9c9c9;
+}
+
+.container {
+  width: 100%;
+  max-width: 520px;
+}
+
+.logoWrap {
+  display: flex;
+  justify-content: center;
+}
+
+.logo {
+  width: 310px;
+  height: auto;
+  display: block;
+}
+
+.subtitle {
+  text-align: center;
+}
+
+.formWrap {
+  margin-top: 16px;
+}
